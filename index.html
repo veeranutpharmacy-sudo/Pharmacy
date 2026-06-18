@@ -930,6 +930,10 @@
       pointer-events: none;
     }
 
+    /* Zone 2 specific heights for Desktop (Taller to clear building) */
+    .callout-line-z2 { height: 130px; }
+    .callout-box-z2 { margin-top: -130px; }
+
     /* ============================
        RESPONSIVE ADJUSTMENTS (5 Breakpoints & Safe Area)
     ============================ */
@@ -959,6 +963,10 @@
         color: #1e40af;
         font-weight: 600;
       }
+
+      /* Zone 2 specific heights for Mobile (Keep original 90px) */
+      .callout-line-z2 { height: 90px; }
+      .callout-box-z2 { margin-top: -90px; }
       
       /* Modal */
       #modal {
@@ -1182,8 +1190,8 @@
       </div>
 
       <!-- Zone 2: คลินิกเวชกรรม Connected Care (X: 26%, Y: 50%) -->
-      <div class="callout-line" style="left: 26%; top: 50%; height: 90px; z-index: 19;"></div>
-      <div class="callout-box" style="left: 26%; top: 50%; margin-top: -90px;">
+      <div class="callout-line callout-line-z2" style="left: 26%; top: 50%; z-index: 19;"></div>
+      <div class="callout-box callout-box-z2" style="left: 26%; top: 50%;">
         <div class="callout-title">2. คลินิกเวชกรรม</div>
       </div>
 
