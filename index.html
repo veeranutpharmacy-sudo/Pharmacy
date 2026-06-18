@@ -7,6 +7,9 @@
   <meta name="description" content="แผนที่โรงพยาบาลแบบอินเทอร์แอคทีฟ - คลิกเพื่อดูข้อมูลแต่ละจุดบริการ">
   <title>แผนที่โรงพยาบาล — Interactive Hospital Map</title>
 
+  <!-- Preload main map image for faster Largest Contentful Paint (LCP) -->
+  <link rel="preload" href="assets%20copy/images/map-base.webp" as="image" type="image/webp">
+
   <!-- Google Fonts: Noto Sans Thai -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,7 +36,7 @@
       font-family: 'Noto Sans Thai', sans-serif;
       background:
         linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
-        url('assets/images/bg-blur.webp') center center / cover no-repeat;
+        url('assets copy/images/bg-blur.webp') center center / cover no-repeat;
     }
 
     /* ============================
@@ -146,6 +149,8 @@
       object-fit: contain;
       user-select: none;
       -webkit-user-drag: none;
+      pointer-events: none;
+      /* Let clicks pass through the image to elements behind */
     }
 
     /* Safe shadow underneath the island */
@@ -160,6 +165,11 @@
       z-index: -1;
       pointer-events: none;
       filter: blur(15px);
+    }
+
+    .building-overlay {
+      pointer-events: none;
+      /* Visual only — SVG polygons handle building clicks */
     }
 
     /* Building overlays — Pulsing glow from the start */
@@ -221,6 +231,15 @@
       transform: translate(-50%, -100%);
       /* Appear with a delay so it waits for map zoom */
       transition: opacity 0.5s ease 0.8s, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s;
+    }
+
+    /* Hide callouts when zoomed into a building */
+    #map-wrapper.zoomed .callout-box,
+    #map-wrapper.zoomed .callout-line {
+      opacity: 0;
+      transform: translate(-50%, -100%) scale(0.3);
+      transition: opacity 0.4s ease 0s, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0s;
+      pointer-events: none;
     }
 
     .callout-box {
@@ -290,9 +309,17 @@
       stroke-linejoin: round;
       stroke-linecap: round;
       cursor: pointer;
-      pointer-events: auto;
-      /* But catch events on the polygons */
+      pointer-events: all;
+      /* Catch events on the polygons */
       transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease;
+    }
+
+    /* Island footprint — absorbs clicks on the island surface */
+    #island-footprint {
+      fill: transparent;
+      stroke: none;
+      pointer-events: all;
+      cursor: default;
     }
 
 
@@ -314,7 +341,7 @@
       z-index: 90;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.6s ease;
     }
 
     #overlay.visible {
@@ -334,7 +361,7 @@
       z-index: 100;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.6s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -346,6 +373,31 @@
     #modal.visible {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    /* Smooth closing animation — cards stagger out */
+    #modal.closing .content-card {
+      transform: translateY(30px) scale(0.95);
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    }
+    #modal.closing .content-card:nth-child(1) { transition-delay: 0s; }
+    #modal.closing .content-card:nth-child(2) { transition-delay: 0.04s; }
+    #modal.closing .content-card:nth-child(3) { transition-delay: 0.08s; }
+    #modal.closing .content-card:nth-child(4) { transition-delay: 0.12s; }
+    #modal.closing .content-card:nth-child(5) { transition-delay: 0.16s; }
+    #modal.closing .content-card:nth-child(6) { transition-delay: 0.20s; }
+
+    #modal.closing .modal-header-title {
+      opacity: 0;
+      transform: translateY(-15px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #modal.closing .modal-close-btn {
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.2s ease, transform 0.2s ease;
     }
 
     .modal-header-title {
@@ -566,7 +618,7 @@
       justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.5s ease;
     }
 
     #detail-view.visible {
@@ -574,10 +626,19 @@
       pointer-events: auto;
     }
 
+    #detail-view.visible .detail-container {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+    }
+
     .detail-container {
       width: 90%;
       max-width: 900px;
       max-height: 90vh;
+      transform: translateY(20px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.35s ease, opacity 0.35s ease;
       overflow-y: auto;
       scrollbar-width: thin;
       scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -953,17 +1014,17 @@
   <div id="map-viewport">
     <div id="map-wrapper" class="intro-state">
       <!-- Main map image (transparent background version) -->
-      <img id="map-image" src="assets/images/map-base.webp" alt="แผนที่โรงพยาบาล" draggable="false">
+      <img id="map-image" src="assets%20copy/images/map-base.webp" alt="แผนที่โรงพยาบาล" draggable="false" fetchpriority="high" decoding="async">
 
       <!-- Building Overlay Images (with explicit depth sorting) -->
-      <img src="assets/images/building-1.webp" class="building-overlay" id="building-1" alt="ตึก 1"
-        style="z-index: 10;">
-      <img src="assets/images/building-2.webp" class="building-overlay" id="building-2" alt="ตึก 2"
-        style="z-index: 20;">
-      <img src="assets/images/building-3.webp" class="building-overlay" id="building-3" alt="ตึก 3"
-        style="z-index: 30;">
-      <img src="assets/images/building-4.webp" class="building-overlay" id="building-4" alt="ตึก 4"
-        style="z-index: 20;">
+      <img src="assets%20copy/images/building-1.webp" class="building-overlay" id="building-1" alt="ตึก 1"
+        style="z-index: 10;" decoding="async">
+      <img src="assets%20copy/images/building-2.webp" class="building-overlay" id="building-2" alt="ตึก 2"
+        style="z-index: 20;" decoding="async">
+      <img src="assets%20copy/images/building-3.webp" class="building-overlay" id="building-3" alt="ตึก 3"
+        style="z-index: 30;" decoding="async">
+      <img src="assets%20copy/images/building-4.webp" class="building-overlay" id="building-4" alt="ตึก 4"
+        style="z-index: 20;" decoding="async">
 
       <!--
         SVG HOTSPOT OVERLAY
@@ -975,7 +1036,14 @@
       -->
       <svg id="hotspot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
 
-
+        <!--
+          ISLAND FOOTPRINT
+          Approximate outline of the floating island — absorbs clicks on the island surface
+          so only clicks OUTSIDE this shape (sky/background) trigger zoom-out.
+          Must be BEFORE building polygons so buildings render on top.
+        -->
+        <polygon id="island-footprint"
+          points="50,12 68,20 82,30 90,42 92,55 88,65 80,73 68,78 55,82 50,83 45,82 32,78 20,73 12,65 8,55 10,42 18,30 32,20" />
 
         <!--
           ZONE 1: โรงพยาบาล
@@ -1006,7 +1074,7 @@
           ZONE 4: คลินิกเวชกรรม
           Medical clinic (right-center) — white flat-roof building
         -->
-        <polygon class="zone-polygon" id="zone-4" data-zone="4" data-name="คลิกนิกพยาบาลและการผดุงครรภ์"
+        <polygon class="zone-polygon" id="zone-4" data-zone="4" data-name="คลินิกพยาบาลและการผดุงครรภ์"
           data-center-x="71" data-center-y="47" vector-effect="non-scaling-stroke"
           points="71,38 80,42 80,50 71,56 63,52 63,42" />
 
@@ -1035,7 +1103,7 @@
         <div class="callout-title">3. ร้านยาคุณภาพ</div>
       </div>
 
-      <!-- Zone 4: คลิกนิกพยาบาลและการผดุงครรภ์ (X: 71%, Y: 47%) -->
+      <!-- Zone 4: คลินิกพยาบาลและการผดุงครรภ์ (X: 71%, Y: 47%) -->
       <div class="callout-line" style="left: 71%; top: 47%; height: 130px; z-index: 19;"></div>
       <div class="callout-box" style="left: 71%; top: 47%; margin-top: -130px;">
         <div class="callout-title">4. คลินิกพยาบาล</div>
@@ -1109,7 +1177,6 @@
       const mapWrapper = document.getElementById('map-wrapper');
       const introOverlay = document.getElementById('intro-overlay');
       const mapImage = document.getElementById('map-image');
-      const tooltip = document.getElementById('tooltip');
       const overlay = document.getElementById('overlay');
       const modal = document.getElementById('modal');
       const modalBody = document.getElementById('modal-body');
@@ -1170,7 +1237,7 @@
           ]
         },
         4: {
-          name: 'คลิกนิกพยาบาลและการผดุงครรภ์',
+          name: 'คลินิกพยาบาลและการผดุงครรภ์',
           icon: '⚕️',
           sections: [
             { title: 'Nursing Workbench', youtube: 'ZXLBuZiEGTI', text: 'ระบบบริหารจัดการคลินิกการพยาบาลและการผดุงครรภ์ ครอบคลุมข้อมูลผู้รับบริการ เวชระเบียนทางการพยาบาล การนัดหมาย แผนการดูแล และการติดตามผลการให้บริการ' },
@@ -1245,6 +1312,9 @@
           const zoneNum = polygon.dataset.zone;
           activeZone = zoneNum;
           isZoomed = true;
+
+          // Hide callout labels with smooth collapse
+          mapWrapper.classList.add('zoomed');
 
           // Keep building glowing
           document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
@@ -1327,7 +1397,7 @@
             // Use YouTube thumbnail instead of iframe to save massive amount of resources
             videoHTML = `
               <div class="card-video">
-                <img src="https://img.youtube.com/vi/${section.youtube}/mqdefault.jpg" alt="Video Thumbnail">
+                <img src="https://img.youtube.com/vi/${section.youtube}/mqdefault.jpg" alt="Video Thumbnail" loading="lazy" decoding="async">
               </div>`;
           } else {
             videoHTML = `<div class="card-video"><span class="card-video-label">16:9 รองรับ YouTube</span></div>`;
@@ -1391,10 +1461,13 @@
       }
 
       function closeDetail() {
+        // Smooth fade-out: let the container animate first, then hide
         detailView.classList.remove('visible');
-        // Clear video to stop playback
-        detailVideo.innerHTML = '<span class="detail-video-label">16:9 รองรับ YouTube</span>';
-        detailVideo.style.background = 'linear-gradient(135deg, #0ea5e9, #06b6d4)';
+        // Clear video to stop playback after the fade-out completes
+        setTimeout(() => {
+          detailVideo.innerHTML = '<span class="detail-video-label">16:9 รองรับ YouTube</span>';
+          detailVideo.style.background = 'linear-gradient(135deg, #0ea5e9, #06b6d4)';
+        }, 400);
       }
 
       // Detail navigation
@@ -1430,26 +1503,36 @@
           return;
         }
 
-        modal.classList.remove('visible');
-        overlay.classList.remove('visible');
+        // Step 1: Add closing class to trigger staggered exit animation
+        modal.classList.add('closing');
 
-        // Reset building glow
-        document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
+        // Step 2: After cards start fading, fade out the modal & overlay
+        setTimeout(() => {
+          modal.classList.remove('visible');
+          overlay.classList.remove('visible');
 
-        // Reset zoom after modal fade-out
+          // Reset building glow
+          document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
+        }, 250);
+
+        // Step 3: Reset zoom smoothly after everything fades
         setTimeout(() => {
           mapWrapper.style.transform = '';
           isZoomed = false;
           activeZone = null;
           currentDetailZone = null;
+          modal.classList.remove('closing');
+
+          // Bring back callout labels with smooth animation
+          mapWrapper.classList.remove('zoomed');
 
           // Show hint again
           setTimeout(() => {
             if (!mapWrapper.classList.contains('intro-state')) {
               hint.classList.remove('hidden');
             }
-          }, 500);
-        }, 300);
+          }, 600);
+        }, 700);
       }
 
       // Close button
@@ -1483,20 +1566,27 @@
         }
       });
 
-      // Zoom out to intro state when clicking empty area on the map
+      // Island footprint absorbs clicks on island surface (prevents zoom-out)
+      const islandFootprint = document.getElementById('island-footprint');
+      if (islandFootprint) {
+        islandFootprint.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Do nothing — just absorb the click so it doesn't reach mapViewport
+        });
+      }
+
+      // Zoom out to intro state when clicking the background OUTSIDE the island
       mapViewport.addEventListener('click', (e) => {
         // Only if we are not zoomed into a building, and not already in intro state
         if (!isZoomed && !mapWrapper.classList.contains('intro-state')) {
-          // Check if click target is the background image or the wrapper itself
-          // We don't want to trigger this if they click a building polygon (which is an SVG element)
-          if (e.target === mapViewport || e.target === mapImage || e.target.id === 'hotspot-svg') {
-            mapWrapper.classList.add('intro-state');
-            introOverlay.classList.remove('hidden');
-            hint.classList.add('hidden');
+          // The click reached mapViewport — meaning it wasn't absorbed by
+          // the island footprint or a building polygon. This is the sky/background.
+          mapWrapper.classList.add('intro-state');
+          introOverlay.classList.remove('hidden');
+          hint.classList.add('hidden');
 
-            // Remove any active building glow just in case
-            document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
-          }
+          // Remove any active building glow just in case
+          document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
         }
       });
 
