@@ -54,10 +54,17 @@
 
     #map-wrapper {
       position: relative;
-      /* Adjusted timing to make the intro zoom a bit slower and dramatic (Cinematic ease-in-out) */
-      transition: transform 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+      transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
       transform-origin: center center;
       will-change: transform;
+      backface-visibility: hidden;
+      contain: layout style;
+    }
+
+    /* Disable expensive blur effects during zoom transition */
+    #map-wrapper.zooming * {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
     }
 
     #map-wrapper.intro-state {
@@ -1085,28 +1092,28 @@
       <!-- ========================
            FLOATING CALLOUT BOXES
       ========================= -->
-      <!-- Zone 1: โรงพยาบาล (X: 50%, Y: 30%) -->
-      <div class="callout-line" style="left: 50%; top: 30%; height: 150px; z-index: 9;"></div>
-      <div class="callout-box" style="left: 50%; top: 30%; margin-top: -150px;">
+      <!-- Zone 1: โรงพยาบาล (X: 46%, Y: 30%) -->
+      <div class="callout-line" style="left: 46%; top: 30%; height: 150px; z-index: 9;"></div>
+      <div class="callout-box" style="left: 46%; top: 30%; margin-top: -150px;">
         <div class="callout-title">1. โรงพยาบาล</div>
       </div>
 
       <!-- Zone 2: คลินิกเวชกรรม Connected Care (X: 30%, Y: 50%) -->
       <div class="callout-line" style="left: 30%; top: 50%; height: 180px; z-index: 19;"></div>
       <div class="callout-box" style="left: 30%; top: 50%; margin-top: -180px;">
-        <div class="callout-title">2. คลินิกนวัตกรรม</div>
+        <div class="callout-title">2. คลินิกเวชกรรม</div>
       </div>
 
       <!-- Zone 3: ร้านยา Digital Health Access (X: 55%, Y: 56%) -->
       <div class="callout-line" style="left: 55%; top: 56%; height: 110px; z-index: 29;"></div>
       <div class="callout-box" style="left: 55%; top: 56%; margin-top: -110px;">
-        <div class="callout-title">3. ร้านยาคุณภาพ</div>
+        <div class="callout-title">3. ร้านยา</div>
       </div>
 
       <!-- Zone 4: คลินิกพยาบาลและการผดุงครรภ์ (X: 71%, Y: 47%) -->
-      <div class="callout-line" style="left: 71%; top: 47%; height: 130px; z-index: 19;"></div>
-      <div class="callout-box" style="left: 71%; top: 47%; margin-top: -130px;">
-        <div class="callout-title">4. คลินิกพยาบาล</div>
+      <div class="callout-line" style="left: 71%; top: 47%; height: 200px; z-index: 19;"></div>
+      <div class="callout-box" style="left: 71%; top: 47%; margin-top: -200px;">
+        <div class="callout-title">4. คลินิกพยาบาลและการผดุงครรภ์</div>
       </div>
     </div>
   </div>
@@ -1345,13 +1352,26 @@
 
           const scale = 2.2;
 
-          // Apply zoom transform
-          mapWrapper.style.transform = `scale(${scale}) translate(${deltaX}px, ${deltaY}px)`;
+          // Prepare for zoom (disable heavy filters)
+          mapWrapper.classList.add('zooming');
 
-          // After zoom animation completes, show modal
-          setTimeout(() => {
-            showModal(zoneNum);
-          }, 700);
+          // Use requestAnimationFrame to ensure the layout is ready before applying transform
+          requestAnimationFrame(() => {
+            // Force reflow
+            void mapWrapper.offsetHeight;
+            
+            // Apply zoom transform
+            mapWrapper.style.transform = `scale(${scale}) translate(${deltaX}px, ${deltaY}px)`;
+            
+            // Use transitionend instead of setTimeout for perfect sync
+            mapWrapper.addEventListener('transitionend', function handler(e) {
+              if (e.propertyName === 'transform') {
+                mapWrapper.removeEventListener('transitionend', handler);
+                mapWrapper.classList.remove('zooming');
+                showModal(zoneNum);
+              }
+            });
+          });
         });
       });
 
@@ -1419,7 +1439,13 @@
           modalBody.appendChild(card);
         });
 
+        // Show overlay first
         overlay.classList.add('visible');
+        
+        // Force browser reflow to ensure the initial CSS state of the newly appended cards
+        // is registered before we add the .visible class. Otherwise, they pop in without animating.
+        void modal.offsetHeight;
+
         requestAnimationFrame(() => {
           modal.classList.add('visible');
         });
@@ -1517,22 +1543,29 @@
 
         // Step 3: Reset zoom smoothly after everything fades
         setTimeout(() => {
-          mapWrapper.style.transform = '';
-          isZoomed = false;
-          activeZone = null;
-          currentDetailZone = null;
-          modal.classList.remove('closing');
+          mapWrapper.classList.add('zooming');
+          
+          requestAnimationFrame(() => {
+            void mapWrapper.offsetHeight;
+            mapWrapper.style.transform = '';
+            isZoomed = false;
+            activeZone = null;
+            currentDetailZone = null;
+            modal.classList.remove('closing');
+            mapWrapper.classList.remove('zoomed');
 
-          // Bring back callout labels with smooth animation
-          mapWrapper.classList.remove('zoomed');
-
-          // Show hint again
-          setTimeout(() => {
-            if (!mapWrapper.classList.contains('intro-state')) {
-              hint.classList.remove('hidden');
-            }
-          }, 600);
-        }, 700);
+            mapWrapper.addEventListener('transitionend', function handler(e) {
+              if (e.propertyName === 'transform') {
+                mapWrapper.removeEventListener('transitionend', handler);
+                mapWrapper.classList.remove('zooming');
+                
+                if (!mapWrapper.classList.contains('intro-state')) {
+                  hint.classList.remove('hidden');
+                }
+              }
+            });
+          });
+        }, 250); // Wait for modal fade out
       }
 
       // Close button
