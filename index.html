@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,24 +10,28 @@
   <!-- Google Fonts: Noto Sans Thai -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
 
   <style>
     /* ============================
        RESET & BASE STYLES
     ============================ */
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    html, body {
+    html,
+    body {
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-family: 'Noto Sans Thai', sans-serif;
-      background: 
+      background:
         linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
         url('assets/images/bg-blur.webp') center center / cover no-repeat;
     }
@@ -70,13 +75,15 @@
       justify-content: center;
       padding-bottom: 60px;
       cursor: pointer;
-      background: rgba(255, 255, 255, 0.01); /* Invisible background to catch clicks everywhere */
-      transition: opacity 0.8s ease;
+      background: rgba(255, 255, 255, 0.01);
+      /* Invisible background to catch clicks everywhere */
+      transition: opacity 0.8s ease 0.7s;
     }
-    
+
     #intro-overlay.hidden {
       opacity: 0;
       pointer-events: none;
+      transition: opacity 0.4s ease 0s;
     }
 
     .intro-title {
@@ -93,12 +100,13 @@
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0px 8px 16px rgba(255, 255, 255, 0.9)) drop-shadow(0px 2px 4px rgba(255, 255, 255, 1));
       letter-spacing: 0.03em;
-      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.7s;
     }
 
     /* Slide up when intro is hidden */
     #intro-overlay.hidden .intro-title {
       transform: translateX(-50%) translateY(-100px);
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0s;
     }
 
     .intro-text {
@@ -110,15 +118,22 @@
       font-weight: 500;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
       animation: pulseIntro 2s infinite alternate ease-in-out;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       letter-spacing: 0.02em;
     }
 
     @keyframes pulseIntro {
-      0% { transform: scale(0.95); opacity: 0.85; }
-      100% { transform: scale(1.05); opacity: 1; }
+      0% {
+        transform: scale(0.95);
+        opacity: 0.85;
+      }
+
+      100% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
     }
 
     /* The main map image */
@@ -139,7 +154,7 @@
       position: absolute;
       width: 60%;
       height: 20%;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 70%);
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 70%);
       bottom: 5%;
       left: 20%;
       z-index: -1;
@@ -155,10 +170,13 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
-      pointer-events: none; /* Let clicks pass through to SVG */
-      opacity: 1; /* Always visible */
-      z-index: 5; /* Between base map and SVG overlay */
-      
+      pointer-events: none;
+      /* Let clicks pass through to SVG */
+      opacity: 1;
+      /* Always visible */
+      z-index: 5;
+      /* Between base map and SVG overlay */
+
       /* Base pulse animation */
       animation: pulseGlow 3s infinite alternate ease-in-out;
       transition: filter 0.3s ease, transform 0.35s ease;
@@ -166,35 +184,33 @@
 
     @keyframes pulseGlow {
       0% {
-        filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.4))
-                drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.3));
+        filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.4)) drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.3));
       }
+
       100% {
-        filter: drop-shadow(0px 0px 6px rgba(255, 255, 255, 0.9))
-                drop-shadow(0px 0px 20px rgba(255, 255, 255, 0.7))
-                drop-shadow(0px 0px 40px rgba(255, 255, 255, 0.4));
+        filter: drop-shadow(0px 0px 6px rgba(255, 255, 255, 0.9)) drop-shadow(0px 0px 20px rgba(255, 255, 255, 0.7)) drop-shadow(0px 0px 40px rgba(255, 255, 255, 0.4));
       }
     }
 
     /* Brighter glow when hovered (active) */
     .building-overlay.active {
-      animation: none; /* Stop pulsing and stay bright */
-      filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 1))
-              drop-shadow(0px 0px 25px rgba(255, 255, 255, 0.9))
-              drop-shadow(0px 0px 50px rgba(255, 255, 255, 0.7));
+      animation: none;
+      /* Stop pulsing and stay bright */
+      filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 1)) drop-shadow(0px 0px 25px rgba(255, 255, 255, 0.9)) drop-shadow(0px 0px 50px rgba(255, 255, 255, 0.7));
     }
 
     /* ============================
        FLOATING CALLOUT BOXES
     ============================ */
-    .callout-box, .callout-line {
+    .callout-box,
+    .callout-line {
       position: absolute;
       opacity: 0;
       pointer-events: none;
       /* Start shifted down slightly */
       transform: translate(-50%, calc(-100% + 40px));
-      /* Add bounce transition */
-      transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      /* Disappear immediately when zooming out */
+      transition: opacity 0.4s ease 0s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0s;
     }
 
     /* Show when NOT in intro-state (zoomed in to explore) */
@@ -203,17 +219,21 @@
       opacity: 1;
       /* End at natural position */
       transform: translate(-50%, -100%);
+      /* Appear with a delay so it waits for map zoom */
+      transition: opacity 0.5s ease 0.8s, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s;
     }
 
     .callout-box {
-      z-index: 60; /* In front of everything */
-      background: rgba(255, 255, 255, 0.4); /* More transparent / glassy */
+      z-index: 60;
+      /* In front of everything */
+      background: rgba(255, 255, 255, 0.4);
+      /* More transparent / glassy */
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-radius: 16px;
       padding: 16px 24px;
       border: 2px solid rgba(59, 130, 246, 0.6);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
       white-space: nowrap;
     }
 
@@ -232,7 +252,8 @@
     }
 
     .callout-line {
-      z-index: 4; /* Behind building overlays (z-index 5) */
+      z-index: 4;
+      /* Behind building overlays (z-index 5) */
       width: 3px;
       background: linear-gradient(to bottom, #3b82f6, #0ea5e9);
     }
@@ -253,7 +274,8 @@
       width: 100%;
       height: 100%;
       z-index: 10;
-      pointer-events: none; /* Let events pass through the SVG itself */
+      pointer-events: none;
+      /* Let events pass through the SVG itself */
     }
 
     /* ============================
@@ -268,40 +290,14 @@
       stroke-linejoin: round;
       stroke-linecap: round;
       cursor: pointer;
-      pointer-events: auto; /* But catch events on the polygons */
+      pointer-events: auto;
+      /* But catch events on the polygons */
       transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease;
     }
 
 
 
-    /* ============================
-       TOOLTIP
-    ============================ */
-    #tooltip {
-      position: fixed;
-      z-index: 1000;
-      padding: 8px 16px;
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: #f1f5f9;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      border-radius: 10px;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(4px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      white-space: nowrap;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    }
-
-    #tooltip.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    /* Tooltip styles removed */
 
     /* ============================
        OVERLAY (behind modal)
@@ -357,9 +353,9 @@
       text-align: center;
       margin-bottom: 32px;
       letter-spacing: 0.02em;
-      text-shadow: 
+      text-shadow:
         0 2px 4px rgba(0, 0, 0, 0.8),
-        0 4px 16px rgba(0, 0, 0, 0.6), 
+        0 4px 16px rgba(0, 0, 0, 0.6),
         0 10px 30px rgba(0, 0, 0, 0.4);
       opacity: 0;
       transform: translateY(20px);
@@ -396,12 +392,21 @@
       box-sizing: border-box;
       /* Custom scrollbar */
       scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.3) transparent;
+      scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     }
 
-    .modal-inner::-webkit-scrollbar { width: 6px; }
-    .modal-inner::-webkit-scrollbar-track { background: transparent; }
-    .modal-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+    .modal-inner::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .modal-inner::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-inner::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
 
     /* Grid layout for content cards */
     .modal-grid {
@@ -433,12 +438,29 @@
     }
 
     /* Staggered animation delays */
-    #modal.visible .content-card:nth-child(1) { transition-delay: 0.05s; }
-    #modal.visible .content-card:nth-child(2) { transition-delay: 0.10s; }
-    #modal.visible .content-card:nth-child(3) { transition-delay: 0.15s; }
-    #modal.visible .content-card:nth-child(4) { transition-delay: 0.20s; }
-    #modal.visible .content-card:nth-child(5) { transition-delay: 0.25s; }
-    #modal.visible .content-card:nth-child(6) { transition-delay: 0.30s; }
+    #modal.visible .content-card:nth-child(1) {
+      transition-delay: 0.05s;
+    }
+
+    #modal.visible .content-card:nth-child(2) {
+      transition-delay: 0.10s;
+    }
+
+    #modal.visible .content-card:nth-child(3) {
+      transition-delay: 0.15s;
+    }
+
+    #modal.visible .content-card:nth-child(4) {
+      transition-delay: 0.20s;
+    }
+
+    #modal.visible .content-card:nth-child(5) {
+      transition-delay: 0.25s;
+    }
+
+    #modal.visible .content-card:nth-child(6) {
+      transition-delay: 0.30s;
+    }
 
     /* YouTube 16:9 placeholder or thumbnail */
     .card-video {
@@ -450,7 +472,8 @@
       justify-content: center;
       position: relative;
       flex-shrink: 0;
-      overflow: hidden; /* Ensure rounded corners if any */
+      overflow: hidden;
+      /* Ensure rounded corners if any */
     }
 
     .card-video img {
@@ -469,7 +492,8 @@
       font-size: 36px;
       color: rgba(255, 255, 255, 0.9);
       text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      z-index: 2; /* Stays above thumbnail */
+      z-index: 2;
+      /* Stays above thumbnail */
       transition: transform 0.2s ease;
     }
 
@@ -516,6 +540,7 @@
       cursor: pointer;
       transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, box-shadow 0.3s ease;
     }
+
     .content-card:hover {
       transform: translateY(-4px) !important;
       box-shadow:
@@ -555,12 +580,21 @@
       max-height: 90vh;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.2) transparent;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     }
 
-    .detail-container::-webkit-scrollbar { width: 5px; }
-    .detail-container::-webkit-scrollbar-track { background: transparent; }
-    .detail-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    .detail-container::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .detail-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .detail-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
 
     /* Large video */
     .detail-video {
@@ -684,7 +718,7 @@
       font-size: 20px;
       z-index: 210;
       transition: background 0.2s ease, transform 0.15s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .detail-close-btn:hover {
@@ -712,7 +746,7 @@
       color: #64748b;
       font-size: 20px;
       z-index: 110;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
     .modal-close-btn:hover {
@@ -752,7 +786,9 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .loading-text {
@@ -823,8 +859,14 @@
       .modal-header-title {
         margin-bottom: 20px;
       }
-      .modal-title-th { font-size: 36px; }
-      .modal-title-en { font-size: 20px; }
+
+      .modal-title-th {
+        font-size: 36px;
+      }
+
+      .modal-title-en {
+        font-size: 20px;
+      }
 
       #modal {
         width: 90%;
@@ -866,8 +908,14 @@
       .modal-header-title {
         margin-bottom: 16px;
       }
-      .modal-title-th { font-size: 28px; }
-      .modal-title-en { font-size: 16px; }
+
+      .modal-title-th {
+        font-size: 28px;
+      }
+
+      .modal-title-en {
+        font-size: 16px;
+      }
 
       #modal {
         width: 95%;
@@ -880,6 +928,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- ========================
@@ -907,10 +956,14 @@
       <img id="map-image" src="assets/images/map-base.webp" alt="แผนที่โรงพยาบาล" draggable="false">
 
       <!-- Building Overlay Images (with explicit depth sorting) -->
-      <img src="assets/images/building-1.webp" class="building-overlay" id="building-1" alt="ตึก 1" style="z-index: 10;">
-      <img src="assets/images/building-2.webp" class="building-overlay" id="building-2" alt="ตึก 2" style="z-index: 20;">
-      <img src="assets/images/building-3.webp" class="building-overlay" id="building-3" alt="ตึก 3" style="z-index: 30;">
-      <img src="assets/images/building-4.webp" class="building-overlay" id="building-4" alt="ตึก 4" style="z-index: 20;">
+      <img src="assets/images/building-1.webp" class="building-overlay" id="building-1" alt="ตึก 1"
+        style="z-index: 10;">
+      <img src="assets/images/building-2.webp" class="building-overlay" id="building-2" alt="ตึก 2"
+        style="z-index: 20;">
+      <img src="assets/images/building-3.webp" class="building-overlay" id="building-3" alt="ตึก 3"
+        style="z-index: 30;">
+      <img src="assets/images/building-4.webp" class="building-overlay" id="building-4" alt="ตึก 4"
+        style="z-index: 20;">
 
       <!--
         SVG HOTSPOT OVERLAY
@@ -920,10 +973,7 @@
         - vector-effect="non-scaling-stroke" keeps stroke width
           consistent in screen pixels
       -->
-      <svg id="hotspot-svg"
-           viewBox="0 0 100 100"
-           preserveAspectRatio="none"
-           xmlns="http://www.w3.org/2000/svg">
+      <svg id="hotspot-svg" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
 
 
 
@@ -932,40 +982,32 @@
           Main hospital building (top center) — large multi-story with helicopter + blue cross
           Isometric shape traced around building facade
         -->
-        <polygon class="zone-polygon" id="zone-1"
-          data-zone="1" data-name="โรงพยาบาล Regional Health Coordination Center"
-          data-center-x="50" data-center-y="30"
-          vector-effect="non-scaling-stroke"
-          points="50,18 65,26 65,34 50,42 36,34 36,26" />
+        <polygon class="zone-polygon" id="zone-1" data-zone="1"
+          data-name="โรงพยาบาล Regional Health Coordination Center" data-center-x="50" data-center-y="30"
+          vector-effect="non-scaling-stroke" points="50,18 65,26 65,34 50,42 36,34 36,26" />
 
         <!--
           ZONE 2: คลินิกนวัตกรรม
           Innovation clinic (left side) — glass-front building with blue/teal roof strip
         -->
-        <polygon class="zone-polygon" id="zone-2"
-          data-zone="2" data-name="คลินิกเวชกรรม Connected Care Clinic"
-          data-center-x="30" data-center-y="50"
-          vector-effect="non-scaling-stroke"
+        <polygon class="zone-polygon" id="zone-2" data-zone="2" data-name="คลินิกเวชกรรม Connected Care Clinic"
+          data-center-x="30" data-center-y="50" vector-effect="non-scaling-stroke"
           points="27,35 42,44 42,57 24,66 17,54 17,43" />
 
         <!--
           ZONE 3: ร้านยา
           Pharmacy (center-bottom) — building with orange/brown facade
         -->
-        <polygon class="zone-polygon" id="zone-3"
-          data-zone="3" data-name="ร้านยา Digital Health Access"
-          data-center-x="55" data-center-y="56"
-          vector-effect="non-scaling-stroke"
+        <polygon class="zone-polygon" id="zone-3" data-zone="3" data-name="ร้านยา Digital Health Access"
+          data-center-x="55" data-center-y="56" vector-effect="non-scaling-stroke"
           points="54,44 65,50 65,61 54,68 45,63 45,50" />
 
         <!--
           ZONE 4: คลินิกเวชกรรม
           Medical clinic (right-center) — white flat-roof building
         -->
-        <polygon class="zone-polygon" id="zone-4"
-          data-zone="4" data-name="คลิกนิกพยาบาลและการผดุงครรภ์"
-          data-center-x="71" data-center-y="47"
-          vector-effect="non-scaling-stroke"
+        <polygon class="zone-polygon" id="zone-4" data-zone="4" data-name="คลิกนิกพยาบาลและการผดุงครรภ์"
+          data-center-x="71" data-center-y="47" vector-effect="non-scaling-stroke"
           points="71,38 80,42 80,50 71,56 63,52 63,42" />
 
 
@@ -1004,7 +1046,7 @@
   <!-- ========================
        TOOLTIP
   ========================= -->
-  <div id="tooltip"></div>
+  <!-- Removed tooltip element -->
 
   <!-- ========================
        OVERLAY (behind modal)
@@ -1063,25 +1105,25 @@
       'use strict';
 
       // ---- DOM REFERENCES ----
-      const mapViewport   = document.getElementById('map-viewport');
-      const mapWrapper    = document.getElementById('map-wrapper');
-      const introOverlay  = document.getElementById('intro-overlay');
-      const mapImage      = document.getElementById('map-image');
-      const tooltip       = document.getElementById('tooltip');
-      const overlay       = document.getElementById('overlay');
-      const modal         = document.getElementById('modal');
-      const modalBody     = document.getElementById('modal-body');
-      const btnClose      = document.getElementById('btn-close');
-      const hint          = document.getElementById('hint');
+      const mapViewport = document.getElementById('map-viewport');
+      const mapWrapper = document.getElementById('map-wrapper');
+      const introOverlay = document.getElementById('intro-overlay');
+      const mapImage = document.getElementById('map-image');
+      const tooltip = document.getElementById('tooltip');
+      const overlay = document.getElementById('overlay');
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modal-body');
+      const btnClose = document.getElementById('btn-close');
+      const hint = document.getElementById('hint');
       const loadingScreen = document.getElementById('loading-screen');
 
       // Detail view refs
-      const detailView    = document.getElementById('detail-view');
-      const detailVideo   = document.getElementById('detail-video');
-      const detailTitle   = document.getElementById('detail-title');
-      const detailDesc    = document.getElementById('detail-desc');
-      const detailPrev    = document.getElementById('detail-prev');
-      const detailNext    = document.getElementById('detail-next');
+      const detailView = document.getElementById('detail-view');
+      const detailVideo = document.getElementById('detail-video');
+      const detailTitle = document.getElementById('detail-title');
+      const detailDesc = document.getElementById('detail-desc');
+      const detailPrev = document.getElementById('detail-prev');
+      const detailNext = document.getElementById('detail-next');
       const detailCounter = document.getElementById('detail-counter');
       const detailCloseBtn = document.getElementById('detail-close');
 
@@ -1098,42 +1140,42 @@
           name: 'โรงพยาบาล Regional Health Coordination Center',
           icon: '🏥',
           sections: [
-            { title: 'Command Center', text: 'ศูนย์บัญชาการอัจฉริยะสำหรับติดตามและบริหารจัดการการดำเนินงานของคลินิกแบบ Real-time รวบรวมข้อมูลผู้ป่วย การนัดหมาย การให้บริการ รายได้ และตัวชี้วัดสำคัญไว้ในหน้าจอเดียว เพื่อช่วยให้ผู้บริหารและทีมงานสามารถติดตามสถานการณ์ วิเคราะห์ข้อมูล และตัดสินใจได้อย่างรวดเร็วและแม่นยำ' },
-            { title: 'Monitor Dashboard', text: 'ระบบติดตามและแสดงผลข้อมูลสุขภาพ การให้บริการ และตัวชี้วัดสำคัญแบบ Real-time ช่วยให้ผู้บริหารและบุคลากรทางการแพทย์สามารถเฝ้าระวัง วิเคราะห์แนวโน้ม และตัดสินใจได้อย่างรวดเร็วและแม่นยำ' },
-            { title: 'Health Information Exchange', text: 'ระบบเชื่อมโยงและแลกเปลี่ยนข้อมูลสุขภาพระหว่างคลินิก โรงพยาบาล ห้องปฏิบัติการ ร้านยา และหน่วยงานที่เกี่ยวข้องอย่างปลอดภัย ช่วยให้ข้อมูลผู้ป่วยสามารถเข้าถึงได้อย่างต่อเนื่อง ลดความซ้ำซ้อน และสนับสนุนการดูแลรักษาแบบไร้รอยต่อ' },
-            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
-            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' },
-            { title: 'Virtual Hospital', text: 'โรงพยาบาลเสมือนที่เชื่อมโยงบริการสุขภาพดิจิทัลเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล การติดตามผู้ป่วยจากที่บ้าน และการเชื่อมต่อข้อมูลสุขภาพ เพื่อให้ผู้ป่วยเข้าถึงการดูแลรักษาได้ทุกที่ ทุกเวลา' }
+            { title: 'Command Center', youtube: 'AhK41kbB2dg', text: 'ศูนย์บัญชาการอัจฉริยะสำหรับติดตามและบริหารจัดการการดำเนินงานของคลินิกแบบ Real-time รวบรวมข้อมูลผู้ป่วย การนัดหมาย การให้บริการ รายได้ และตัวชี้วัดสำคัญไว้ในหน้าจอเดียว เพื่อช่วยให้ผู้บริหารและทีมงานสามารถติดตามสถานการณ์ วิเคราะห์ข้อมูล และตัดสินใจได้อย่างรวดเร็วและแม่นยำ' },
+            { title: 'Monitor Dashboard', youtube: 'AhK41kbB2dg', text: 'ระบบติดตามและแสดงผลข้อมูลสุขภาพ การให้บริการ และตัวชี้วัดสำคัญแบบ Real-time ช่วยให้ผู้บริหารและบุคลากรทางการแพทย์สามารถเฝ้าระวัง วิเคราะห์แนวโน้ม และตัดสินใจได้อย่างรวดเร็วและแม่นยำ' },
+            { title: 'Health Information Exchange', youtube: 'AhK41kbB2dg', text: 'ระบบเชื่อมโยงและแลกเปลี่ยนข้อมูลสุขภาพระหว่างคลินิก โรงพยาบาล ห้องปฏิบัติการ ร้านยา และหน่วยงานที่เกี่ยวข้องอย่างปลอดภัย ช่วยให้ข้อมูลผู้ป่วยสามารถเข้าถึงได้อย่างต่อเนื่อง ลดความซ้ำซ้อน และสนับสนุนการดูแลรักษาแบบไร้รอยต่อ' },
+            { title: 'IoMT Connect', youtube: 'AhK41kbB2dg', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
+            { title: 'TeleHealth Thailand', youtube: 'AhK41kbB2dg', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' },
+            { title: 'Virtual Hospital', youtube: 'AhK41kbB2dg', text: 'โรงพยาบาลเสมือนที่เชื่อมโยงบริการสุขภาพดิจิทัลเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล การติดตามผู้ป่วยจากที่บ้าน และการเชื่อมต่อข้อมูลสุขภาพ เพื่อให้ผู้ป่วยเข้าถึงการดูแลรักษาได้ทุกที่ ทุกเวลา' }
           ]
         },
         2: {
           name: 'คลินิกเวชกรรม Connected Care Clinic',
           icon: '🔬',
           sections: [
-            { title: 'Workbench HIS', text: 'แพลตฟอร์ม HIS สำหรับคลินิกยุคใหม่ ครบวงจรในระบบเดียว ตั้งแต่การจัดการเวชระเบียนอิเล็กทรอนิกส์ (EMR), ข้อมูลผู้ป่วย, การนัดหมาย, Telemedicine, ระบบติดตามและโทรติดตามผู้ป่วย, e-Prescription ไปจนถึง Dashboard และ Real-time Monitoring เพื่อช่วยให้คลินิกบริหารจัดการบริการสุขภาพได้อย่างมีประสิทธิภาพ พร้อมรองรับการเติบโตสู่ Digital Health Ecosystem อย่างเต็มรูปแบบ เชื่อมกับร้านยาในชุมชน รับปรึกษาจากหน่วยบริการอื่นๆ' },
-            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
-            { title: 'TeleHealth Thailand', text: 'แอปพลิเคชันสำหรับผู้ป่วยและครอบครัว เชื่อมต่อการดูแลสุขภาพระหว่างผู้ป่วยกับคลินิกอย่างต่อเนื่อง ช่วยติดตามอาการ บันทึกข้อมูลสุขภาพ รับคำแนะนำจากบุคลากรทางการแพทย์ และเข้าถึงบริการสุขภาพได้ทุกที่ทุกเวลา' }
+            { title: 'Workbench HIS', youtube: 'AhK41kbB2dg', text: 'แพลตฟอร์ม HIS สำหรับคลินิกยุคใหม่ ครบวงจรในระบบเดียว ตั้งแต่การจัดการเวชระเบียนอิเล็กทรอนิกส์ (EMR), ข้อมูลผู้ป่วย, การนัดหมาย, Telemedicine, ระบบติดตามและโทรติดตามผู้ป่วย, e-Prescription ไปจนถึง Dashboard และ Real-time Monitoring เพื่อช่วยให้คลินิกบริหารจัดการบริการสุขภาพได้อย่างมีประสิทธิภาพ พร้อมรองรับการเติบโตสู่ Digital Health Ecosystem อย่างเต็มรูปแบบ เชื่อมกับร้านยาในชุมชน รับปรึกษาจากหน่วยบริการอื่นๆ' },
+            { title: 'IoMT Connect', youtube: 'AhK41kbB2dg', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
+            { title: 'TeleHealth Thailand', youtube: 'AhK41kbB2dg', text: 'แอปพลิเคชันสำหรับผู้ป่วยและครอบครัว เชื่อมต่อการดูแลสุขภาพระหว่างผู้ป่วยกับคลินิกอย่างต่อเนื่อง ช่วยติดตามอาการ บันทึกข้อมูลสุขภาพ รับคำแนะนำจากบุคลากรทางการแพทย์ และเข้าถึงบริการสุขภาพได้ทุกที่ทุกเวลา' }
           ]
         },
         3: {
           name: 'ร้านยา Digital Health Access',
           icon: '💊',
           sections: [
-            { title: 'Pharmacy Workbench', text: 'ระบบบริหารจัดการร้านยาและบริการเภสัชกรรม ครอบคลุมข้อมูลผู้รับบริการ ประวัติการใช้ยา การจ่ายยา สต๊อกยา และการให้คำปรึกษา' },
-            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในร้านยาและที่บ้าน' },
-            { title: 'ระบบ Drugstore', text: 'ระบบบริหารจัดการร้านยาครบวงจร รองรับการจัดการข้อมูลผู้รับบริการ การจ่ายยา การบริหารคลังยา การติดตามการใช้ยา และการเชื่อมโยงบริการเภสัชกรรม เพื่อเพิ่มประสิทธิภาพการดำเนินงานและยกระดับคุณภาพการดูแลสุขภาพของประชาชน' },
-            { title: 'Pharmacy Command Center', text: 'ศูนย์ติดตามและวิเคราะห์ข้อมูลการให้บริการ ข้อมูลสุขภาพประชาชน การใช้ยา และตัวชี้วัดสำคัญ เพื่อสนับสนุนการตัดสินใจและการบริหารจัดการร้านยา' },
-            { title: 'E-Prescription', text: 'ระบบใบสั่งยาอิเล็กทรอนิกส์ที่ช่วยให้บุคลากรทางการแพทย์สามารถออก ส่งต่อ และจัดการใบสั่งยาในรูปแบบดิจิทัลได้อย่างปลอดภัย ลดความผิดพลาดจากเอกสารกระดาษ พร้อมเชื่อมโยงข้อมูลระหว่างหน่วยบริการ ร้านยา และผู้ป่วย เพื่อการเข้าถึงยาและการรักษาอย่างต่อเนื่อง' },
-            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' }
+            { title: 'Pharmacy Workbench', youtube: 'AhK41kbB2dg', text: 'ระบบบริหารจัดการร้านยาและบริการเภสัชกรรม ครอบคลุมข้อมูลผู้รับบริการ ประวัติการใช้ยา การจ่ายยา สต๊อกยา และการให้คำปรึกษา' },
+            { title: 'IoMT Connect', youtube: 'AhK41kbB2dg', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในร้านยาและที่บ้าน' },
+            { title: 'ระบบ Drugstore', youtube: 'AhK41kbB2dg', text: 'ระบบบริหารจัดการร้านยาครบวงจร รองรับการจัดการข้อมูลผู้รับบริการ การจ่ายยา การบริหารคลังยา การติดตามการใช้ยา และการเชื่อมโยงบริการเภสัชกรรม เพื่อเพิ่มประสิทธิภาพการดำเนินงานและยกระดับคุณภาพการดูแลสุขภาพของประชาชน' },
+            { title: 'Pharmacy Command Center', youtube: 'AhK41kbB2dg', text: 'ศูนย์ติดตามและวิเคราะห์ข้อมูลการให้บริการ ข้อมูลสุขภาพประชาชน การใช้ยา และตัวชี้วัดสำคัญ เพื่อสนับสนุนการตัดสินใจและการบริหารจัดการร้านยา' },
+            { title: 'E-Prescription', youtube: 'AhK41kbB2dg', text: 'ระบบใบสั่งยาอิเล็กทรอนิกส์ที่ช่วยให้บุคลากรทางการแพทย์สามารถออก ส่งต่อ และจัดการใบสั่งยาในรูปแบบดิจิทัลได้อย่างปลอดภัย ลดความผิดพลาดจากเอกสารกระดาษ พร้อมเชื่อมโยงข้อมูลระหว่างหน่วยบริการ ร้านยา และผู้ป่วย เพื่อการเข้าถึงยาและการรักษาอย่างต่อเนื่อง' },
+            { title: 'TeleHealth Thailand', youtube: 'AhK41kbB2dg', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' }
           ]
         },
         4: {
           name: 'คลิกนิกพยาบาลและการผดุงครรภ์',
           icon: '⚕️',
           sections: [
-            { title: 'Nursing Workbench', text: 'ระบบบริหารจัดการคลินิกการพยาบาลและการผดุงครรภ์ ครอบคลุมข้อมูลผู้รับบริการ เวชระเบียนทางการพยาบาล การนัดหมาย แผนการดูแล และการติดตามผลการให้บริการ' },
-            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
-            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' }
+            { title: 'Nursing Workbench', youtube: 'AhK41kbB2dg', text: 'ระบบบริหารจัดการคลินิกการพยาบาลและการผดุงครรภ์ ครอบคลุมข้อมูลผู้รับบริการ เวชระเบียนทางการพยาบาล การนัดหมาย แผนการดูแล และการติดตามผลการให้บริการ' },
+            { title: 'IoMT Connect', youtube: 'AhK41kbB2dg', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน' },
+            { title: 'TeleHealth Thailand', youtube: 'AhK41kbB2dg', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ' }
           ]
         }
       };
@@ -1159,7 +1201,7 @@
         // Remove intro state to trigger zoom in
         mapWrapper.classList.remove('intro-state');
         introOverlay.classList.add('hidden');
-        
+
         // Ensure hint is hidden during the animation, then show it
         hint.classList.add('hidden');
         setTimeout(() => {
@@ -1172,11 +1214,9 @@
       // ---- TOOLTIP & CLICK HANDLING for SVG polygons ----
       zonePolygons.forEach(polygon => {
 
-        // Tooltip: show on mouseenter
+        // Highlight on mouseenter
         polygon.addEventListener('mouseenter', () => {
           if (isZoomed) return;
-          tooltip.textContent = polygon.dataset.name;
-          tooltip.classList.add('visible');
 
           // Highlight the building overlay
           const zoneNum = polygon.dataset.zone;
@@ -1184,36 +1224,16 @@
           if (buildingOverlay) buildingOverlay.classList.add('active');
         });
 
-        // Tooltip: follow cursor on mousemove
-        polygon.addEventListener('mousemove', (e) => {
-          if (isZoomed) return;
-          const offsetX = 16;
-          const offsetY = -40;
-          let x = e.clientX + offsetX;
-          let y = e.clientY + offsetY;
+        // Tooltip logic removed
 
-          // Prevent tooltip from going off-screen
-          const tooltipRect = tooltip.getBoundingClientRect();
-          if (x + tooltipRect.width > window.innerWidth - 12) {
-            x = e.clientX - tooltipRect.width - 12;
-          }
-          if (y < 12) {
-            y = e.clientY + 24;
-          }
-
-          tooltip.style.left = x + 'px';
-          tooltip.style.top = y + 'px';
-        });
-
-        // Tooltip: hide on mouseleave
+        // Remove highlight on mouseleave
         polygon.addEventListener('mouseleave', () => {
-          tooltip.classList.remove('visible');
 
           // Remove highlight only if not fixed-active
           const zoneNum = polygon.dataset.zone;
           const buildingOverlay = document.getElementById(`building-${zoneNum}`);
           if (buildingOverlay && !buildingOverlay.classList.contains('fixed-active')) {
-             buildingOverlay.classList.remove('active');
+            buildingOverlay.classList.remove('active');
           }
         });
 
@@ -1230,11 +1250,10 @@
           document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
           const buildingOverlay = document.getElementById(`building-${zoneNum}`);
           if (buildingOverlay) {
-             buildingOverlay.classList.add('active', 'fixed-active');
+            buildingOverlay.classList.add('active', 'fixed-active');
           }
 
-          // Hide tooltip & hint
-          tooltip.classList.remove('visible');
+          // Hide hint
           hint.classList.add('hidden');
 
           // Get the zoom target center from data attributes (% values)
@@ -1283,7 +1302,7 @@
           const fullName = polygon.dataset.name;
           // Extract Thai and English parts (assuming English starts at the first A-Z character)
           const engMatch = fullName.match(/[a-zA-Z]/);
-          
+
           if (engMatch) {
             const engIndex = engMatch.index;
             const thPart = fullName.substring(0, engIndex).trim();
@@ -1474,7 +1493,7 @@
             mapWrapper.classList.add('intro-state');
             introOverlay.classList.remove('hidden');
             hint.classList.add('hidden');
-            
+
             // Remove any active building glow just in case
             document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
           }
@@ -1485,4 +1504,5 @@
   </script>
 
 </body>
+
 </html>
