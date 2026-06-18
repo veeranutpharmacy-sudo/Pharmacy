@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="แผนที่โรงพยาบาลแบบอินเทอร์แอคทีฟ - คลิกเพื่อดูข้อมูลแต่ละจุดบริการ">
+  <title>แผนที่โรงพยาบาล — Interactive Hospital Map</title>
+
+  <!-- Google Fonts: Noto Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================
+       RESET & BASE STYLES
+    ============================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Noto Sans Thai', sans-serif;
+      background: 
+        linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
+        url('assets/images/bg-blur.webp') center center / cover no-repeat;
+    }
+
+    /* ============================
+       MAP CONTAINER
+    ============================ */
+    #map-viewport {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #map-wrapper {
+      position: relative;
+      /* Adjusted timing to make the intro zoom a bit slower and dramatic (Cinematic ease-in-out) */
+      transition: transform 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    #map-wrapper.intro-state {
+      transform: scale(0.65) translateY(10%);
+      /* To avoid interaction during intro */
+      pointer-events: none;
+    }
+
+    /* ============================
+       INTRO OVERLAY
+    ============================ */
+    #intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 60px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.01); /* Invisible background to catch clicks everywhere */
+      transition: opacity 0.8s ease;
+    }
+    
+    #intro-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro-title {
+      position: absolute;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 56px;
+      font-weight: 700;
+      text-align: center;
+      width: 100%;
+      background: linear-gradient(135deg, #1e3a8a, #0284c7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0px 8px 16px rgba(255, 255, 255, 0.9)) drop-shadow(0px 2px 4px rgba(255, 255, 255, 1));
+      letter-spacing: 0.03em;
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Slide up when intro is hidden */
+    #intro-overlay.hidden .intro-title {
+      transform: translateX(-50%) translateY(-100px);
+    }
+
+    .intro-text {
+      background: rgba(15, 23, 42, 0.85);
+      color: #fff;
+      padding: 16px 36px;
+      border-radius: 40px;
+      font-size: 18px;
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      animation: pulseIntro 2s infinite alternate ease-in-out;
+      border: 1px solid rgba(255,255,255,0.15);
+      letter-spacing: 0.02em;
+    }
+
+    @keyframes pulseIntro {
+      0% { transform: scale(0.95); opacity: 0.85; }
+      100% { transform: scale(1.05); opacity: 1; }
+    }
+
+    /* The main map image */
+    #map-image {
+      display: block;
+      max-width: 100vw;
+      max-height: 100vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Safe shadow underneath the island */
+    #map-wrapper::after {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 20%;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 70%);
+      bottom: 5%;
+      left: 20%;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(15px);
+    }
+
+    /* Building overlays — Pulsing glow from the start */
+    .building-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none; /* Let clicks pass through to SVG */
+      opacity: 1; /* Always visible */
+      z-index: 5; /* Between base map and SVG overlay */
+      
+      /* Base pulse animation */
+      animation: pulseGlow 3s infinite alternate ease-in-out;
+      transition: filter 0.3s ease, transform 0.35s ease;
+    }
+
+    @keyframes pulseGlow {
+      0% {
+        filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.4))
+                drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.3));
+      }
+      100% {
+        filter: drop-shadow(0px 0px 6px rgba(255, 255, 255, 0.9))
+                drop-shadow(0px 0px 20px rgba(255, 255, 255, 0.7))
+                drop-shadow(0px 0px 40px rgba(255, 255, 255, 0.4));
+      }
+    }
+
+    /* Brighter glow when hovered (active) */
+    .building-overlay.active {
+      animation: none; /* Stop pulsing and stay bright */
+      filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 1))
+              drop-shadow(0px 0px 25px rgba(255, 255, 255, 0.9))
+              drop-shadow(0px 0px 50px rgba(255, 255, 255, 0.7));
+    }
+
+    /* ============================
+       FLOATING CALLOUT BOXES
+    ============================ */
+    .callout-box, .callout-line {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      /* Start shifted down slightly */
+      transform: translate(-50%, calc(-100% + 40px));
+      /* Add bounce transition */
+      transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Show when NOT in intro-state (zoomed in to explore) */
+    #map-wrapper:not(.intro-state) .callout-box,
+    #map-wrapper:not(.intro-state) .callout-line {
+      opacity: 1;
+      /* End at natural position */
+      transform: translate(-50%, -100%);
+    }
+
+    .callout-box {
+      z-index: 60; /* In front of everything */
+      background: rgba(255, 255, 255, 0.4); /* More transparent / glassy */
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px 24px;
+      border: 2px solid rgba(59, 130, 246, 0.6);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+
+    .callout-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .callout-title span.icon {
+      font-size: 28px;
+      color: #3b82f6;
+    }
+
+    .callout-line {
+      z-index: 4; /* Behind building overlays (z-index 5) */
+      width: 3px;
+      background: linear-gradient(to bottom, #3b82f6, #0ea5e9);
+    }
+
+
+
+
+    /* ============================
+       SVG HOTSPOT OVERLAY
+       - Sits on top of the map image
+       - Contains polygon shapes for
+         each building zone
+    ============================ */
+    #hotspot-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none; /* Let events pass through the SVG itself */
+    }
+
+    /* ============================
+       ZONE POLYGONS
+       - White outline on hover
+       - Glow effect via SVG filter
+    ============================ */
+    .zone-polygon {
+      fill: transparent;
+      stroke: transparent;
+      stroke-width: 2.5px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      cursor: pointer;
+      pointer-events: auto; /* But catch events on the polygons */
+      transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease;
+    }
+
+
+
+    /* ============================
+       TOOLTIP
+    ============================ */
+    #tooltip {
+      position: fixed;
+      z-index: 1000;
+      padding: 8px 16px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border-radius: 10px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    #tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ============================
+       OVERLAY (behind modal)
+    ============================ */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.15);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 90;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ============================
+       MODAL — Full-screen two-column
+    ============================ */
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    #modal.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-header-title {
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 32px;
+      letter-spacing: 0.02em;
+      text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 4px 16px rgba(0, 0, 0, 0.6), 
+        0 10px 30px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+      transition-delay: 0.1s;
+    }
+
+    .modal-title-th {
+      display: block;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-title-en {
+      display: block;
+      font-size: 24px;
+      font-weight: 700;
+      opacity: 0.85;
+    }
+
+    #modal.visible .modal-header-title {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Inner container — now a scrollable grid area */
+    .modal-inner {
+      width: 100%;
+      max-width: 1400px;
+      height: 100%;
+      overflow-y: auto;
+      padding: 20px 10px;
+      box-sizing: border-box;
+      /* Custom scrollbar */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.3) transparent;
+    }
+
+    .modal-inner::-webkit-scrollbar { width: 6px; }
+    .modal-inner::-webkit-scrollbar-track { background: transparent; }
+    .modal-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+    /* Grid layout for content cards */
+    .modal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+    }
+
+    /* Each content card */
+    .content-card {
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #modal.visible .content-card {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Staggered animation delays */
+    #modal.visible .content-card:nth-child(1) { transition-delay: 0.05s; }
+    #modal.visible .content-card:nth-child(2) { transition-delay: 0.10s; }
+    #modal.visible .content-card:nth-child(3) { transition-delay: 0.15s; }
+    #modal.visible .content-card:nth-child(4) { transition-delay: 0.20s; }
+    #modal.visible .content-card:nth-child(5) { transition-delay: 0.25s; }
+    #modal.visible .content-card:nth-child(6) { transition-delay: 0.30s; }
+
+    /* YouTube 16:9 placeholder or thumbnail */
+    .card-video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+      overflow: hidden; /* Ensure rounded corners if any */
+    }
+
+    .card-video img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    .card-video::before {
+      content: '▶';
+      position: absolute;
+      font-size: 36px;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 2; /* Stays above thumbnail */
+      transition: transform 0.2s ease;
+    }
+
+    .content-card:hover .card-video::before {
+      transform: scale(1.15);
+    }
+
+    .card-video-label {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+    }
+
+    /* Card text content */
+    .card-text {
+      padding: 14px 16px;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.6;
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Card hover effect */
+    .content-card {
+      cursor: pointer;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, box-shadow 0.3s ease;
+    }
+    .content-card:hover {
+      transform: translateY(-4px) !important;
+      box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ============================
+       DETAIL VIEW — Layer 2
+    ============================ */
+    #detail-view {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 200;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #detail-view.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .detail-container {
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
+    }
+
+    .detail-container::-webkit-scrollbar { width: 5px; }
+    .detail-container::-webkit-scrollbar-track { background: transparent; }
+    .detail-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+    /* Large video */
+    .detail-video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .detail-video::before {
+      content: '▶';
+      font-size: 64px;
+      color: rgba(255, 255, 255, 0.7);
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .detail-video iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .detail-video-label {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Detail text content */
+    .detail-text-box {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .detail-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 14px 0;
+      line-height: 1.3;
+    }
+
+    .detail-desc {
+      font-size: 15px;
+      color: #334155;
+      line-height: 1.8;
+      margin: 0;
+    }
+
+    /* Navigation buttons */
+    .detail-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .detail-nav-btn {
+      padding: 10px 24px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-family: 'Noto Sans Thai', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease;
+    }
+
+    .detail-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .detail-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+      transform: none;
+    }
+
+    .detail-nav-counter {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+    }
+
+    /* Detail close button */
+    .detail-close-btn {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      z-index: 210;
+      transition: background 0.2s ease, transform 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .detail-close-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+      transform: scale(1.08);
+    }
+
+    /* Close button */
+    .modal-close-btn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.15s ease;
+      color: #64748b;
+      font-size: 20px;
+      z-index: 110;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      transform: scale(1.08);
+    }
+
+    /* ============================
+       LOADING SCREEN
+    ============================ */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 40%, #f0f4ff 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(59, 130, 246, 0.15);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #475569;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    /* ============================
+       INSTRUCTIONS HINT
+    ============================ */
+    #hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 22px;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #e2e8f0;
+      font-size: 13px;
+      font-weight: 400;
+      border-radius: 14px;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      letter-spacing: 0.01em;
+    }
+
+    #hint.hidden {
+      opacity: 0;
+    }
+
+    /* ============================
+       LICENSE TEXT
+    ============================ */
+    #license-text {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 8px 16px;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 11px;
+      font-weight: 400;
+      border-radius: 8px;
+      z-index: 20;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      letter-spacing: 0.02em;
+    }
+
+    /* ============================
+       RESPONSIVE ADJUSTMENTS
+    ============================ */
+    @media (max-width: 768px) {
+      .intro-title {
+        font-size: 40px;
+        top: 10%;
+      }
+
+      .modal-header-title {
+        margin-bottom: 20px;
+      }
+      .modal-title-th { font-size: 36px; }
+      .modal-title-en { font-size: 20px; }
+
+      #modal {
+        width: 90%;
+        height: 60%;
+        min-width: unset;
+        border-radius: 18px;
+      }
+
+      .modal-header {
+        padding: 18px 20px 12px;
+      }
+
+      .modal-header h2 {
+        font-size: 18px;
+      }
+
+      .modal-body {
+        padding: 18px 20px;
+      }
+
+      .modal-footer {
+        padding: 14px 20px 18px;
+      }
+
+      #hint {
+        font-size: 12px;
+        bottom: 16px;
+        padding: 8px 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .intro-title {
+        font-size: 32px;
+        top: 8%;
+        padding: 0 16px;
+      }
+
+      .modal-header-title {
+        margin-bottom: 16px;
+      }
+      .modal-title-th { font-size: 28px; }
+      .modal-title-en { font-size: 16px; }
+
+      #modal {
+        width: 95%;
+        height: 65%;
+      }
+
+      .modal-header h2 {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================
+       LOADING SCREEN
+  ========================= -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <div class="loading-text">กำลังโหลดแผนที่...</div>
+  </div>
+
+  <!-- ========================
+       INTRO OVERLAY
+  ========================= -->
+  <div id="intro-overlay">
+    <h1 class="intro-title">ระบบดิจิทัลสุขภาพประเทศไทย</h1>
+    <div class="intro-text">คลิกที่ใดก็ได้เพื่อเริ่มต้นสำรวจ</div>
+  </div>
+
+  <!-- ========================
+       MAP VIEWPORT & WRAPPER
+  ========================= -->
+  <div id="map-viewport">
+    <div id="map-wrapper" class="intro-state">
+      <!-- Main map image (transparent background version) -->
+      <img id="map-image" src="assets/images/map-base.webp" alt="แผนที่โรงพยาบาล" draggable="false">
+
+      <!-- Building Overlay Images (with explicit depth sorting) -->
+      <img src="assets/images/building-1.webp" class="building-overlay" id="building-1" alt="ตึก 1" style="z-index: 10;">
+      <img src="assets/images/building-2.webp" class="building-overlay" id="building-2" alt="ตึก 2" style="z-index: 20;">
+      <img src="assets/images/building-3.webp" class="building-overlay" id="building-3" alt="ตึก 3" style="z-index: 30;">
+      <img src="assets/images/building-4.webp" class="building-overlay" id="building-4" alt="ตึก 4" style="z-index: 20;">
+
+      <!--
+        SVG HOTSPOT OVERLAY
+        - viewBox="0 0 100 100" with preserveAspectRatio="none"
+          maps coordinates directly to % of the container
+        - Each polygon traces the outline of a building/zone
+        - vector-effect="non-scaling-stroke" keeps stroke width
+          consistent in screen pixels
+      -->
+      <svg id="hotspot-svg"
+           viewBox="0 0 100 100"
+           preserveAspectRatio="none"
+           xmlns="http://www.w3.org/2000/svg">
+
+
+
+        <!--
+          ZONE 1: โรงพยาบาล
+          Main hospital building (top center) — large multi-story with helicopter + blue cross
+          Isometric shape traced around building facade
+        -->
+        <polygon class="zone-polygon" id="zone-1"
+          data-zone="1" data-name="โรงพยาบาล Regional Health Coordination Center"
+          data-center-x="50" data-center-y="30"
+          vector-effect="non-scaling-stroke"
+          points="50,18 65,26 65,34 50,42 36,34 36,26" />
+
+        <!--
+          ZONE 2: คลินิกนวัตกรรม
+          Innovation clinic (left side) — glass-front building with blue/teal roof strip
+        -->
+        <polygon class="zone-polygon" id="zone-2"
+          data-zone="2" data-name="คลินิกเวชกรรม Connected Care Clinic"
+          data-center-x="30" data-center-y="50"
+          vector-effect="non-scaling-stroke"
+          points="27,35 42,44 42,57 24,66 17,54 17,43" />
+
+        <!--
+          ZONE 3: ร้านยา
+          Pharmacy (center-bottom) — building with orange/brown facade
+        -->
+        <polygon class="zone-polygon" id="zone-3"
+          data-zone="3" data-name="ร้านยา Digital Health Access"
+          data-center-x="55" data-center-y="56"
+          vector-effect="non-scaling-stroke"
+          points="54,44 65,50 65,61 54,68 45,63 45,50" />
+
+        <!--
+          ZONE 4: คลินิกเวชกรรม
+          Medical clinic (right-center) — white flat-roof building
+        -->
+        <polygon class="zone-polygon" id="zone-4"
+          data-zone="4" data-name="คลิกนิกพยาบาลและการผดุงครรภ์"
+          data-center-x="71" data-center-y="47"
+          vector-effect="non-scaling-stroke"
+          points="71,38 80,42 80,50 71,56 63,52 63,42" />
+
+
+
+      </svg>
+
+      <!-- ========================
+           FLOATING CALLOUT BOXES
+      ========================= -->
+      <!-- Zone 1: โรงพยาบาล (X: 50%, Y: 30%) -->
+      <div class="callout-line" style="left: 50%; top: 30%; height: 150px; z-index: 9;"></div>
+      <div class="callout-box" style="left: 50%; top: 30%; margin-top: -150px;">
+        <div class="callout-title">1. โรงพยาบาล</div>
+      </div>
+
+      <!-- Zone 2: คลินิกเวชกรรม Connected Care (X: 30%, Y: 50%) -->
+      <div class="callout-line" style="left: 30%; top: 50%; height: 180px; z-index: 19;"></div>
+      <div class="callout-box" style="left: 30%; top: 50%; margin-top: -180px;">
+        <div class="callout-title">2. คลินิกนวัตกรรม</div>
+      </div>
+
+      <!-- Zone 3: ร้านยา Digital Health Access (X: 55%, Y: 56%) -->
+      <div class="callout-line" style="left: 55%; top: 56%; height: 110px; z-index: 29;"></div>
+      <div class="callout-box" style="left: 55%; top: 56%; margin-top: -110px;">
+        <div class="callout-title">3. ร้านยาคุณภาพ</div>
+      </div>
+
+      <!-- Zone 4: คลิกนิกพยาบาลและการผดุงครรภ์ (X: 71%, Y: 47%) -->
+      <div class="callout-line" style="left: 71%; top: 47%; height: 130px; z-index: 19;"></div>
+      <div class="callout-box" style="left: 71%; top: 47%; margin-top: -130px;">
+        <div class="callout-title">4. คลินิกพยาบาล</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       TOOLTIP
+  ========================= -->
+  <div id="tooltip"></div>
+
+  <!-- ========================
+       OVERLAY (behind modal)
+  ========================= -->
+  <div id="overlay"></div>
+
+  <!-- ========================
+       MODAL POPUP
+  ========================= -->
+  <div id="modal">
+    <button class="modal-close-btn" id="btn-close" aria-label="ปิด">✕</button>
+    <h2 class="modal-header-title" id="modal-header-title"></h2>
+    <div class="modal-inner">
+      <div class="modal-grid" id="modal-body">
+        <!-- Cards will be generated dynamically by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       DETAIL VIEW — Layer 2
+  ========================= -->
+  <div id="detail-view">
+    <button class="detail-close-btn" id="detail-close" aria-label="ปิด">✕</button>
+    <div class="detail-container">
+      <div class="detail-video" id="detail-video">
+        <span class="detail-video-label">16:9 รองรับ YouTube</span>
+      </div>
+      <div class="detail-text-box">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <p class="detail-desc" id="detail-desc"></p>
+      </div>
+      <div class="detail-nav">
+        <button class="detail-nav-btn" id="detail-prev">← ก่อนหน้า</button>
+        <span class="detail-nav-counter" id="detail-counter"></span>
+        <button class="detail-nav-btn" id="detail-next">ถัดไป →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       INSTRUCTIONS HINT
+  ========================= -->
+  <div id="hint" class="hidden">💡 คลิกที่อาคารบนแผนที่เพื่อดูข้อมูลเพิ่มเติม</div>
+
+  <!-- ========================
+       JAVASCRIPT
+  ========================= -->
+  <!-- ========================
+       LICENSE TEXT
+  ========================= -->
+  <div id="license-text">พัฒนาระบบโดย รศ.ดร.ภญ.สุณี เลิศสินอุดม เลขาธิการสภาเภสัชกรรม</div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // ---- DOM REFERENCES ----
+      const mapViewport   = document.getElementById('map-viewport');
+      const mapWrapper    = document.getElementById('map-wrapper');
+      const introOverlay  = document.getElementById('intro-overlay');
+      const mapImage      = document.getElementById('map-image');
+      const tooltip       = document.getElementById('tooltip');
+      const overlay       = document.getElementById('overlay');
+      const modal         = document.getElementById('modal');
+      const modalBody     = document.getElementById('modal-body');
+      const btnClose      = document.getElementById('btn-close');
+      const hint          = document.getElementById('hint');
+      const loadingScreen = document.getElementById('loading-screen');
+
+      // Detail view refs
+      const detailView    = document.getElementById('detail-view');
+      const detailVideo   = document.getElementById('detail-video');
+      const detailTitle   = document.getElementById('detail-title');
+      const detailDesc    = document.getElementById('detail-desc');
+      const detailPrev    = document.getElementById('detail-prev');
+      const detailNext    = document.getElementById('detail-next');
+      const detailCounter = document.getElementById('detail-counter');
+      const detailCloseBtn = document.getElementById('detail-close');
+
+      // Select all SVG polygon hotspots
+      const zonePolygons = document.querySelectorAll('.zone-polygon');
+
+      // ---- STATE ----
+      let isZoomed = false;
+      let activeZone = null;
+
+      // ---- ZONE DATA ----
+      const zoneContent = {
+        1: {
+          name: 'โรงพยาบาล Regional Health Coordination Center',
+          icon: '🏥',
+          sections: [
+            { title: 'Command Center', text: 'ศูนย์บัญชาการอัจฉริยะสำหรับติดตามและบริหารจัดการการดำเนินงานของคลินิกแบบ Real-time รวบรวมข้อมูลผู้ป่วย การนัดหมาย การให้บริการ รายได้ และตัวชี้วัดสำคัญไว้ในหน้าจอเดียว เพื่อช่วยให้ผู้บริหารและทีมงานสามารถติดตามสถานการณ์ วิเคราะห์ข้อมูล และตัดสินใจได้อย่างรวดเร็วและแม่นยำ', youtube: 'iBuTEywEQ6U' },
+            { title: 'Monitor Dashboard', text: 'ระบบติดตามและแสดงผลข้อมูลสุขภาพ การให้บริการ และตัวชี้วัดสำคัญแบบ Real-time ช่วยให้ผู้บริหารและบุคลากรทางการแพทย์สามารถเฝ้าระวัง วิเคราะห์แนวโน้ม และตัดสินใจได้อย่างรวดเร็วและแม่นยำ', youtube: 'iBuTEywEQ6U' },
+            { title: 'Health Information Exchange', text: 'ระบบเชื่อมโยงและแลกเปลี่ยนข้อมูลสุขภาพระหว่างคลินิก โรงพยาบาล ห้องปฏิบัติการ ร้านยา และหน่วยงานที่เกี่ยวข้องอย่างปลอดภัย ช่วยให้ข้อมูลผู้ป่วยสามารถเข้าถึงได้อย่างต่อเนื่อง ลดความซ้ำซ้อน และสนับสนุนการดูแลรักษาแบบไร้รอยต่อ', youtube: 'iBuTEywEQ6U' },
+            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน', youtube: 'iBuTEywEQ6U' },
+            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ', youtube: 'iBuTEywEQ6U' },
+            { title: 'Virtual Hospital', text: 'โรงพยาบาลเสมือนที่เชื่อมโยงบริการสุขภาพดิจิทัลเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล การติดตามผู้ป่วยจากที่บ้าน และการเชื่อมต่อข้อมูลสุขภาพ เพื่อให้ผู้ป่วยเข้าถึงการดูแลรักษาได้ทุกที่ ทุกเวลา', youtube: 'iBuTEywEQ6U' }
+          ]
+        },
+        2: {
+          name: 'คลินิกเวชกรรม Connected Care Clinic',
+          icon: '🔬',
+          sections: [
+            { title: 'Workbench HIS', text: 'แพลตฟอร์ม HIS สำหรับคลินิกยุคใหม่ ครบวงจรในระบบเดียว ตั้งแต่การจัดการเวชระเบียนอิเล็กทรอนิกส์ (EMR), ข้อมูลผู้ป่วย, การนัดหมาย, Telemedicine, ระบบติดตามและโทรติดตามผู้ป่วย, e-Prescription ไปจนถึง Dashboard และ Real-time Monitoring เพื่อช่วยให้คลินิกบริหารจัดการบริการสุขภาพได้อย่างมีประสิทธิภาพ พร้อมรองรับการเติบโตสู่ Digital Health Ecosystem อย่างเต็มรูปแบบ เชื่อมกับร้านยาในชุมชน รับปรึกษาจากหน่วยบริการอื่นๆ', youtube: 'iBuTEywEQ6U' },
+            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน', youtube: 'iBuTEywEQ6U' },
+            { title: 'TeleHealth Thailand', text: 'แอปพลิเคชันสำหรับผู้ป่วยและครอบครัว เชื่อมต่อการดูแลสุขภาพระหว่างผู้ป่วยกับคลินิกอย่างต่อเนื่อง ช่วยติดตามอาการ บันทึกข้อมูลสุขภาพ รับคำแนะนำจากบุคลากรทางการแพทย์ และเข้าถึงบริการสุขภาพได้ทุกที่ทุกเวลา', youtube: 'iBuTEywEQ6U' }
+          ]
+        },
+        3: {
+          name: 'ร้านยา Digital Health Access',
+          icon: '💊',
+          sections: [
+            { title: 'Pharmacy Workbench', text: 'ระบบบริหารจัดการร้านยาและบริการเภสัชกรรม ครอบคลุมข้อมูลผู้รับบริการ ประวัติการใช้ยา การจ่ายยา สต๊อกยา และการให้คำปรึกษา', youtube: 'iBuTEywEQ6U' },
+            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในร้านยาและที่บ้าน', youtube: 'iBuTEywEQ6U' },
+            { title: 'ระบบ Drugstore', text: 'ระบบบริหารจัดการร้านยาครบวงจร รองรับการจัดการข้อมูลผู้รับบริการ การจ่ายยา การบริหารคลังยา การติดตามการใช้ยา และการเชื่อมโยงบริการเภสัชกรรม เพื่อเพิ่มประสิทธิภาพการดำเนินงานและยกระดับคุณภาพการดูแลสุขภาพของประชาชน', youtube: 'iBuTEywEQ6U' },
+            { title: 'Pharmacy Command Center', text: 'ศูนย์ติดตามและวิเคราะห์ข้อมูลการให้บริการ ข้อมูลสุขภาพประชาชน การใช้ยา และตัวชี้วัดสำคัญ เพื่อสนับสนุนการตัดสินใจและการบริหารจัดการร้านยา', youtube: 'iBuTEywEQ6U' },
+            { title: 'E-Prescription', text: 'ระบบใบสั่งยาอิเล็กทรอนิกส์ที่ช่วยให้บุคลากรทางการแพทย์สามารถออก ส่งต่อ และจัดการใบสั่งยาในรูปแบบดิจิทัลได้อย่างปลอดภัย ลดความผิดพลาดจากเอกสารกระดาษ พร้อมเชื่อมโยงข้อมูลระหว่างหน่วยบริการ ร้านยา และผู้ป่วย เพื่อการเข้าถึงยาและการรักษาอย่างต่อเนื่อง', youtube: 'iBuTEywEQ6U' },
+            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ', youtube: 'iBuTEywEQ6U' }
+          ]
+        },
+        4: {
+          name: 'คลิกนิกพยาบาลและการผดุงครรภ์',
+          icon: '⚕️',
+          sections: [
+            { title: 'Nursing Workbench', text: 'ระบบบริหารจัดการคลินิกการพยาบาลและการผดุงครรภ์ ครอบคลุมข้อมูลผู้รับบริการ เวชระเบียนทางการพยาบาล การนัดหมาย แผนการดูแล และการติดตามผลการให้บริการ', youtube: 'iBuTEywEQ6U' },
+            { title: 'IoMT Connect', text: 'เชื่อมต่ออุปกรณ์สุขภาพอัจฉริยะ (Internet of Medical Things: IoMT) เข้ากับระบบคลินิกได้อย่างไร้รอยต่อ ผ่าน Bluetooth รองรับการรับส่งข้อมูลสุขภาพแบบ Real-time ข้อมูลจากอุปกรณ์จะถูกส่งตรงเข้าสู่ระบบ HIS หรือ Tablet โดยอัตโนมัติ ช่วยลดการบันทึกข้อมูลซ้ำ เพิ่มความถูกต้องของข้อมูล และสนับสนุนการติดตามผู้ป่วยทั้งในคลินิกและที่บ้าน', youtube: 'iBuTEywEQ6U' },
+            { title: 'TeleHealth Thailand', text: 'แพลตฟอร์มสุขภาพดิจิทัลที่เชื่อมโยงประชาชน บุคลากรทางการแพทย์ ร้านยา คลินิก และหน่วยบริการสุขภาพเข้าด้วยกัน รองรับการให้บริการทางการแพทย์ เภสัชกรรม และการพยาบาลทางไกล พร้อมเชื่อมต่อข้อมูลสุขภาพเพื่อการดูแลผู้ป่วยอย่างต่อเนื่องและไร้รอยต่อ', youtube: 'iBuTEywEQ6U' }
+          ]
+        }
+      };
+
+      // ---- LOADING ----
+      mapImage.addEventListener('load', () => {
+        setTimeout(() => {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => loadingScreen.remove(), 600);
+        }, 400);
+      });
+
+      // Fallback: hide loading after 5s
+      setTimeout(() => {
+        if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => loadingScreen.remove(), 600);
+        }
+      }, 5000);
+
+      // Handle intro click
+      introOverlay.addEventListener('click', () => {
+        // Remove intro state to trigger zoom in
+        mapWrapper.classList.remove('intro-state');
+        introOverlay.classList.add('hidden');
+        
+        // Ensure hint is hidden during the animation, then show it
+        hint.classList.add('hidden');
+        setTimeout(() => {
+          if (!isZoomed && !mapWrapper.classList.contains('intro-state')) {
+            hint.classList.remove('hidden');
+          }
+        }, 1500); // Wait for the intro zoom animation to finish
+      });
+
+      // ---- TOOLTIP & CLICK HANDLING for SVG polygons ----
+      zonePolygons.forEach(polygon => {
+
+        // Tooltip: show on mouseenter
+        polygon.addEventListener('mouseenter', () => {
+          if (isZoomed) return;
+          tooltip.textContent = polygon.dataset.name;
+          tooltip.classList.add('visible');
+
+          // Highlight the building overlay
+          const zoneNum = polygon.dataset.zone;
+          const buildingOverlay = document.getElementById(`building-${zoneNum}`);
+          if (buildingOverlay) buildingOverlay.classList.add('active');
+        });
+
+        // Tooltip: follow cursor on mousemove
+        polygon.addEventListener('mousemove', (e) => {
+          if (isZoomed) return;
+          const offsetX = 16;
+          const offsetY = -40;
+          let x = e.clientX + offsetX;
+          let y = e.clientY + offsetY;
+
+          // Prevent tooltip from going off-screen
+          const tooltipRect = tooltip.getBoundingClientRect();
+          if (x + tooltipRect.width > window.innerWidth - 12) {
+            x = e.clientX - tooltipRect.width - 12;
+          }
+          if (y < 12) {
+            y = e.clientY + 24;
+          }
+
+          tooltip.style.left = x + 'px';
+          tooltip.style.top = y + 'px';
+        });
+
+        // Tooltip: hide on mouseleave
+        polygon.addEventListener('mouseleave', () => {
+          tooltip.classList.remove('visible');
+
+          // Remove highlight only if not fixed-active
+          const zoneNum = polygon.dataset.zone;
+          const buildingOverlay = document.getElementById(`building-${zoneNum}`);
+          if (buildingOverlay && !buildingOverlay.classList.contains('fixed-active')) {
+             buildingOverlay.classList.remove('active');
+          }
+        });
+
+        // ---- CLICK → ZOOM + MODAL ----
+        polygon.addEventListener('click', (e) => {
+          if (isZoomed) return;
+          e.stopPropagation();
+
+          const zoneNum = polygon.dataset.zone;
+          activeZone = zoneNum;
+          isZoomed = true;
+
+          // Keep building glowing
+          document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
+          const buildingOverlay = document.getElementById(`building-${zoneNum}`);
+          if (buildingOverlay) {
+             buildingOverlay.classList.add('active', 'fixed-active');
+          }
+
+          // Hide tooltip & hint
+          tooltip.classList.remove('visible');
+          hint.classList.add('hidden');
+
+          // Get the zoom target center from data attributes (% values)
+          const centerX = parseFloat(polygon.dataset.centerX);
+          const centerY = parseFloat(polygon.dataset.centerY);
+
+          // Get current map wrapper dimensions
+          const wrapperRect = mapWrapper.getBoundingClientRect();
+          const imgWidth = wrapperRect.width;
+          const imgHeight = wrapperRect.height;
+
+          // Pixel position of zone center relative to map
+          const targetPxX = (centerX / 100) * imgWidth;
+          const targetPxY = (centerY / 100) * imgHeight;
+
+          // Offset from wrapper center to zone center
+          const deltaX = (imgWidth / 2 - targetPxX);
+          const deltaY = (imgHeight / 2 - targetPxY);
+
+          const scale = 2.2;
+
+          // Apply zoom transform
+          mapWrapper.style.transform = `scale(${scale}) translate(${deltaX}px, ${deltaY}px)`;
+
+          // After zoom animation completes, show modal
+          setTimeout(() => {
+            showModal(zoneNum);
+          }, 700);
+        });
+      });
+
+      // ---- DETAIL VIEW STATE ----
+      let currentDetailZone = null;
+      let currentDetailIndex = 0;
+
+      function showModal(zoneNum) {
+        const data = zoneContent[zoneNum];
+        if (!data) return;
+
+        currentDetailZone = zoneNum;
+
+        // Set modal title
+        const polygon = document.getElementById(`zone-${zoneNum}`);
+        const modalTitleEl = document.getElementById('modal-header-title');
+        if (polygon && modalTitleEl) {
+          const fullName = polygon.dataset.name;
+          // Extract Thai and English parts (assuming English starts at the first A-Z character)
+          const engMatch = fullName.match(/[a-zA-Z]/);
+          
+          if (engMatch) {
+            const engIndex = engMatch.index;
+            const thPart = fullName.substring(0, engIndex).trim();
+            const enPart = fullName.substring(engIndex).trim();
+            modalTitleEl.innerHTML = `<span class="modal-title-th">${thPart}</span><span class="modal-title-en">${enPart}</span>`;
+          } else {
+            modalTitleEl.innerHTML = `<span class="modal-title-th">${fullName}</span>`;
+          }
+        }
+
+        // Clear previous content
+        modalBody.innerHTML = '';
+
+        // Generate content cards from sections
+        data.sections.forEach((section, index) => {
+          const card = document.createElement('div');
+          card.className = 'content-card';
+
+          // YouTube 16:9 placeholder or thumbnail
+          let videoHTML;
+          if (section.youtube) {
+            // Use YouTube thumbnail instead of iframe to save massive amount of resources
+            videoHTML = `
+              <div class="card-video">
+                <img src="https://img.youtube.com/vi/${section.youtube}/mqdefault.jpg" alt="Video Thumbnail">
+              </div>`;
+          } else {
+            videoHTML = `<div class="card-video"><span class="card-video-label">16:9 รองรับ YouTube</span></div>`;
+          }
+
+          card.innerHTML = `
+            ${videoHTML}
+            <div class="card-text">
+              <h3 class="card-title">${section.title}</h3>
+              <p class="card-desc">${section.text}</p>
+            </div>
+          `;
+
+          // Click card → open detail view
+          card.addEventListener('click', () => {
+            openDetail(zoneNum, index);
+          });
+
+          modalBody.appendChild(card);
+        });
+
+        overlay.classList.add('visible');
+        requestAnimationFrame(() => {
+          modal.classList.add('visible');
+        });
+      }
+
+      // ---- DETAIL VIEW FUNCTIONS ----
+      function openDetail(zoneNum, sectionIndex) {
+        const data = zoneContent[zoneNum];
+        if (!data) return;
+
+        currentDetailZone = zoneNum;
+        currentDetailIndex = sectionIndex;
+        renderDetail();
+        detailView.classList.add('visible');
+      }
+
+      function renderDetail() {
+        const data = zoneContent[currentDetailZone];
+        const section = data.sections[currentDetailIndex];
+        const total = data.sections.length;
+
+        // Title & description
+        detailTitle.textContent = section.title;
+        detailDesc.textContent = section.text;
+
+        // Video
+        if (section.youtube) {
+          detailVideo.innerHTML = `<iframe src="https://www.youtube.com/embed/${section.youtube}?autoplay=1&si=XsNwcmQv0X-Gmb6b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+          detailVideo.style.background = 'transparent';
+        } else {
+          detailVideo.innerHTML = '<span class="detail-video-label">16:9 รองรับ YouTube</span>';
+          detailVideo.style.background = 'linear-gradient(135deg, #0ea5e9, #06b6d4)';
+        }
+
+        // Navigation
+        detailPrev.disabled = currentDetailIndex === 0;
+        detailNext.disabled = currentDetailIndex === total - 1;
+        detailCounter.textContent = `${currentDetailIndex + 1} / ${total}`;
+      }
+
+      function closeDetail() {
+        detailView.classList.remove('visible');
+        // Clear video to stop playback
+        detailVideo.innerHTML = '<span class="detail-video-label">16:9 รองรับ YouTube</span>';
+        detailVideo.style.background = 'linear-gradient(135deg, #0ea5e9, #06b6d4)';
+      }
+
+      // Detail navigation
+      detailPrev.addEventListener('click', () => {
+        if (currentDetailIndex > 0) {
+          currentDetailIndex--;
+          renderDetail();
+        }
+      });
+
+      detailNext.addEventListener('click', () => {
+        const data = zoneContent[currentDetailZone];
+        if (currentDetailIndex < data.sections.length - 1) {
+          currentDetailIndex++;
+          renderDetail();
+        }
+      });
+
+      // Detail close button
+      detailCloseBtn.addEventListener('click', closeDetail);
+
+      // Click background of detail view to close
+      detailView.addEventListener('click', (e) => {
+        if (e.target === detailView) {
+          closeDetail();
+        }
+      });
+
+      function closeModal() {
+        // Close detail first if open
+        if (detailView.classList.contains('visible')) {
+          closeDetail();
+          return;
+        }
+
+        modal.classList.remove('visible');
+        overlay.classList.remove('visible');
+
+        // Reset building glow
+        document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
+
+        // Reset zoom after modal fade-out
+        setTimeout(() => {
+          mapWrapper.style.transform = '';
+          isZoomed = false;
+          activeZone = null;
+          currentDetailZone = null;
+
+          // Show hint again
+          setTimeout(() => {
+            if (!mapWrapper.classList.contains('intro-state')) {
+              hint.classList.remove('hidden');
+            }
+          }, 500);
+        }, 300);
+      }
+
+      // Close button
+      btnClose.addEventListener('click', closeModal);
+
+      // Back to main — click anywhere outside cards on modal
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.classList.contains('modal-inner') || e.target.classList.contains('modal-grid')) {
+          closeModal();
+        }
+      });
+
+      // Click overlay to close
+      overlay.addEventListener('click', closeModal);
+
+      // ESC key to close — detail first, then modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (detailView.classList.contains('visible')) {
+            closeDetail();
+          } else if (isZoomed) {
+            closeModal();
+          }
+        }
+      });
+
+      // Handle window resize while zoomed — reset
+      window.addEventListener('resize', () => {
+        if (isZoomed) {
+          closeModal();
+        }
+      });
+
+      // Zoom out to intro state when clicking empty area on the map
+      mapViewport.addEventListener('click', (e) => {
+        // Only if we are not zoomed into a building, and not already in intro state
+        if (!isZoomed && !mapWrapper.classList.contains('intro-state')) {
+          // Check if click target is the background image or the wrapper itself
+          // We don't want to trigger this if they click a building polygon (which is an SVG element)
+          if (e.target === mapViewport || e.target === mapImage || e.target.id === 'hotspot-svg') {
+            mapWrapper.classList.add('intro-state');
+            introOverlay.classList.remove('hidden');
+            hint.classList.add('hidden');
+            
+            // Remove any active building glow just in case
+            document.querySelectorAll('.building-overlay').forEach(el => el.classList.remove('active', 'fixed-active'));
+          }
+        }
+      });
+
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Project-specific ignored folders (raw assets, pdfs, etc.)
+_design_assets/
+
+# Environment variables
+.env
+.env.local
